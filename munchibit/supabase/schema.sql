@@ -130,3 +130,13 @@ begin
 end $$;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- ===== Permisos (GRANT) =====
+-- Necesarios para que la API de Supabase pueda acceder a las tablas; RLS sigue limitando cada fila.
+grant usage on schema public to anon, authenticated;
+grant select on public.foods to anon, authenticated;
+grant insert, update, delete on public.foods to authenticated;
+grant select, insert, update, delete on
+  public.profiles, public.daily_goals, public.favorites, public.meal_logs,
+  public.exercise_logs, public.water_logs, public.weight_logs
+  to authenticated;
