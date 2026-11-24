@@ -9,8 +9,9 @@ const CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+let cors: Record<string, string> = CORS; // se ajusta en cada petición para aceptar los headers que pida el navegador
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+  new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const num = (v: unknown, min: number, max: number) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : 0;
@@ -24,7 +25,8 @@ No inventes alimentos que no se ven. Si la imagen no contiene comida, devuelve {
 Si no puedes distinguir salsas, aceites o ingredientes mezclados, indícalo en "note". Máximo 10 alimentos.`;
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  cors = { ...CORS, 'Access-Control-Allow-Headers': req.headers.get('access-control-request-headers') ?? CORS['Access-Control-Allow-Headers'] };
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   let claimedFor: string | null = null;
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   try {
