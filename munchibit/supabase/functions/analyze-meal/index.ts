@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
         ] }],
       }),
     });
-    if (!res.ok) throw new Error('anthropic_' + res.status);
+    if (!res.ok) throw new Error(`anthropic_${res.status}: ${(await res.text()).slice(0, 300)}`);
     const out = await res.json();
     const text: string = (out.content ?? []).map((b: { text?: string }) => b.text ?? '').join('');
     const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
@@ -74,9 +74,11 @@ Deno.serve(async (req) => {
     })).filter((i: { name: string; grams: number }) => i.name && i.grams > 0);
 
     return json({ items, note: typeof parsed.note === 'string' ? parsed.note.slice(0, 200) : '', remaining: left });
-  } catch (_e) {
+  } catch (e) {
+    console.error('analyze-meal error:', e);
     // Si el análisis falló, devolvemos la foto reservada
     if (claimedFor) await admin.rpc('release_photo_slot', { p_user: claimedFor });
-    return json({ error: 'failed', message: 'No pudimos analizar la foto. No se descontó de tu límite; inténtalo de nuevo.' }, 502);
+    const detail = String((e as { message?: string })?.message ?? e).replace(/sk-ant-[A-Za-z0-9_-]+/g, '***').slice(0, 300);
+    return json({ error: 'failed', message: 'No pudimos analizar la foto. No se descontó de tu límite.', detail }, 502);
   }
 });

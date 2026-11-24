@@ -46,8 +46,11 @@ export default function PhotoMeal({ userId, foods, meal, mealLabel, reload }:
         body: { image, mediaType: 'image/jpeg', catalog: foods.map((f) => f.name) },
       });
       if (error) {
-        let msg = 'No pudimos analizar la foto. Inténtalo de nuevo.';
-        try { msg = (await (error as unknown as { context: Response }).context.json()).message ?? msg; } catch { /* sin detalle */ }
+        let msg = 'La función de análisis no respondió. Revisa que esté desplegada con el nombre analyze-meal.';
+        try {
+          const b = await (error as unknown as { context: Response }).context.json();
+          msg = (b.message ?? msg) + (b.detail ? ` (${b.detail})` : '');
+        } catch { /* respuesta sin JSON: función no encontrada o caída */ }
         throw new Error(msg);
       }
       const items = data.items as Item[];
