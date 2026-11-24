@@ -50,3 +50,16 @@ Sin esto, el enlace de "Olvidé mi contraseña" no vuelve a tu app.
 - El avatar es un emoji (se guarda como `emoji:🦝`). Para fotos habría que añadir Supabase Storage.
 - Modo oscuro: no incluido en esta versión.
 - Las recomendaciones son reglas locales (`src/lib/recommendations.ts`), listas para extender con IA.
+
+## Registro por foto (opcional)
+Usa una Edge Function de Supabase que llama a Claude (modelo Haiku 5.5). Límite: 4 fotos por usuario al día, aplicado en el servidor.
+
+1. **Cuenta y saldo:** crea una cuenta en https://platform.claude.com, carga saldo (con $5 alcanza para miles de fotos con Haiku) y en la sección de claves de API crea una clave. En la consola puedes fijar un tope de gasto y dejar desactivada la recarga automática.
+2. **SQL:** en el SQL Editor de Supabase ejecuta `supabase/photo_analysis.sql`.
+3. **Función:** en Supabase → Edge Functions → *Deploy a new function* (editor), nómbrala exactamente `analyze-meal`, pega el contenido de `supabase/functions/analyze-meal/index.ts` y despliega. Déjala con la verificación de JWT activada.
+4. **Secreto:** en Edge Functions → Secrets agrega `ANTHROPIC_API_KEY` con tu clave. (`SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` ya vienen incluidas; no las pegues en ningún otro sitio.)
+5. Sube el código a GitHub como siempre. En Registrar aparecerá el botón "Registrar con una foto".
+
+Con la CLI: `supabase functions deploy analyze-meal` y `supabase secrets set ANTHROPIC_API_KEY=...`.
+
+Para cambiar el límite diario, edita `DAILY_LIMIT` en la función. Para usar un modelo más preciso, cambia `MODEL` (por ejemplo a `claude-sonnet-5-5`; cuesta unas 20 veces más por foto).
