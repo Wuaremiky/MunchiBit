@@ -9,7 +9,7 @@ export function useAppData(userId: string) {
   const [error, setError] = useState<string | null>(null);
   const reload = useCallback(async () => {
     const since = addDays(iso(), -60);
-    const [p, m, e, w, wt, g, f, fav] = await Promise.all([
+    const [p, m, e, w, wt, g, f, fav, act] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
       supabase.from('meal_logs').select('*').gte('date', since),
       supabase.from('exercise_logs').select('*').gte('date', since),
@@ -18,6 +18,7 @@ export function useAppData(userId: string) {
       supabase.from('daily_goals').select('*').order('effective_from'),
       supabase.from('foods').select('*').order('name'),
       supabase.from('favorites').select('food_id'),
+      supabase.from('activity_logs').select('date,level').gte('date', since),
     ]);
     const failed = [p, m, e, w, wt, g, f, fav].find((r) => r.error)?.error;
     if (failed) { setError(failed.message); return; }
@@ -31,6 +32,7 @@ export function useAppData(userId: string) {
     setData({
       profile: profile as AppData['profile'], meals: m.data ?? [], exercise: e.data ?? [], water: w.data ?? [],
       weights: wt.data ?? [], goals: g.data ?? [], foods: f.data ?? [],
+      activity: act.error ? [] : act.data ?? [], // no es crítico: si falta la tabla, la app sigue funcionando
       favorites: (fav.data ?? []).map((x: { food_id: string }) => x.food_id),
     });
   }, [userId]);

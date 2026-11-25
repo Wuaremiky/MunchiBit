@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bmr, computeTargets, estimateGoalDate, exerciseKcal } from '../src/lib/calc';
+import { bmr, computeTargets, dayActivityKcal, estimateGoalDate, exerciseKcal } from '../src/lib/calc';
 import { plateau, safetyAlerts, streak, weeklyAverages, type DaySummary } from '../src/lib/recommendations';
 import { addDays } from '../src/lib/dates';
 
@@ -23,6 +23,12 @@ describe('calc', () => {
   it('calcula calorías de ejercicio', () => expect(exerciseKcal('Correr', 30, 70)).toBe(343));
   it('elíptica 40 min a 70 kg', () => expect(exerciseKcal('Elíptica', 40, 70)).toBe(233));
   it('ejercicio con barra', () => expect(exerciseKcal('Sentadilla con barra', 45, 80)).toBe(360));
+  it('actividad del día escala por peso', () => {
+    expect(dayActivityKcal('normal', 70)).toBe(0);
+    expect(dayActivityKcal('activo', 70)).toBe(150);
+    expect(dayActivityKcal('muy_activo', 70)).toBe(300);
+    expect(dayActivityKcal('activo', 90)).toBe(190);
+  });
   it('estima fecha meta', () => {
     const today = '2026-11-23';
     const w = [0, 7, 14, 21].map((i) => ({ date: addDays(today, -21 + i), weight_kg: 80 - i * 0.1 }));

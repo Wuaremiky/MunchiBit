@@ -36,7 +36,7 @@ function Main({ userId }: { userId: string }) {
   return (
     <div className="min-h-screen md:pl-56">
       <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-10 flex justify-around border-t border-ink/10 bg-white p-1 md:inset-y-0 md:right-auto md:w-56 md:flex-col md:justify-start md:gap-1 md:border-r md:border-t-0 md:p-3">
-        <div className="mb-4 hidden items-center gap-2 px-3 pt-2 md:flex"><img src="/panda.png" alt="" className="h-10 w-10 rounded-full" /><span className="text-xl font-extrabold"><span className="text-mango">Munchi</span><span className="text-leaf">Bit</span></span></div>
+        <div className="mb-4 hidden items-center gap-2 px-3 pt-2 md:flex"><img src="/panda.png" alt="" className="h-10 w-10 object-contain" /><span className="text-xl font-extrabold"><span className="text-mango">Munchi</span><span className="text-leaf">Bit</span></span></div>
         {TABS.map(({ id, label, Icon }) => (
           <button key={id} onClick={() => setTab(id)} aria-current={tab === id ? 'page' : undefined}
             className={`flex flex-1 flex-col items-center gap-0.5 rounded-2xl px-3 py-2 text-xs font-bold md:flex-none md:flex-row md:gap-3 md:text-base ${tab === id ? 'bg-leaf/10 text-leaf' : 'text-ink/70'}`}>

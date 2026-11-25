@@ -63,3 +63,21 @@ Usa una Edge Function de Supabase que llama a Claude (modelo Haiku 5.5). Límite
 Con la CLI: `supabase functions deploy analyze-meal` y `supabase secrets set ANTHROPIC_API_KEY=...`.
 
 Para cambiar el límite diario, edita `DAILY_LIMIT` en la función. Para usar un modelo más preciso, cambia `MODEL` (por ejemplo a `claude-sonnet-5-5`; cuesta unas 20 veces más por foto).
+
+## Registro por texto
+Misma función (`analyze-meal`) y mismo flujo de revisión que la foto, pero con su propio límite: **8 consultas de texto al día** por usuario (las fotos siguen con 4).
+
+1. En el SQL Editor de Supabase ejecuta `supabase/text_analysis.sql` (después de `photo_analysis.sql`).
+2. Reemplaza el código de la función `analyze-meal` por el nuevo `supabase/functions/analyze-meal/index.ts` y despliega.
+3. Sube el código a GitHub. En Registrar aparece el cuadro "…o cuéntanos qué comiste".
+
+Los límites se cambian en la función: `PHOTO_LIMIT` y `TEXT_LIMIT`.
+
+## Imágenes
+Las imágenes viven en `public/`: `logo.png` (pantalla de inicio), `panda.png` (barra lateral) y `favicon.png` (pestaña). Este zip no incluye esos archivos para no pisar tus PNG con fondo transparente.
+
+## Actividad de hoy (gasto pasivo)
+En la pestaña Hoy hay un selector: **Normal** (+0), **Activo** (+150 kcal) y **Muy activo** (+300 kcal), escalado por tu peso (base 70 kg). Sirve para días en que caminas o te mueves más de lo habitual (aseo, tareas del hogar). Son estimaciones moderadas y solo suman, nunca restan.
+- Se suma al presupuesto del día solo si tienes activada en Perfil la opción de sumar calorías quemadas.
+- No cuentes aquí el ejercicio que ya registraste, para no contar dos veces.
+- Requiere ejecutar `supabase/daily_activity.sql` en el SQL Editor de Supabase. Si falta, el resto de la app funciona igual.

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Camera, Trash2 } from 'lucide-react';
+import { Camera, PenLine, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { iso } from '../lib/dates';
 import { itemKcal } from '../lib/calc';
@@ -22,14 +22,15 @@ async function shrink(file: File, max = 1280): Promise<string> {
   } finally { URL.revokeObjectURL(url); }
 }
 
-export default function PhotoMeal({ userId, foods, meal, mealLabel, reload }:
+export default function AiMeal({ userId, foods, meal, mealLabel, reload }:
   { userId: string; foods: Food[]; meal: MealType; mealLabel: string; reload: () => Promise<void> }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [note, setNote] = useState('');
-  const [remaining, setRemaining] = useState<number | null>(null);
+  const [info, setInfo] = useState('');
+  const [text, setText] = useState('');
 
   const nut = (r: Row) => {
     const f = foods.find((x) => x.id === r.foodId);
@@ -37,13 +38,11 @@ export default function PhotoMeal({ userId, foods, meal, mealLabel, reload }:
   };
   const total = (rows ?? []).reduce((s, r) => s + itemKcal(nut(r).kcal, +r.grams || 0), 0);
 
-  async function onFile(file?: File) {
-    if (!file) return;
+  async function run(payload: Record<string, unknown>) {
     setBusy(true); setErr(null); setRows(null);
     try {
-      const image = await shrink(file);
       const { data, error } = await supabase.functions.invoke('analyze-meal', {
-        body: { image, mediaType: 'image/jpeg', catalog: foods.map((f) => f.name) },
+        body: { ...payload, catalog: foods.map((f) => f.name) },
       });
       if (error) {
         let msg = 'La función de análisis no respondió. Revisa que esté desplegada con el nombre analyze-meal.';
@@ -54,15 +53,22 @@ export default function PhotoMeal({ userId, foods, meal, mealLabel, reload }:
         throw new Error(msg);
       }
       const items = data.items as Item[];
-      setRemaining(data.remaining ?? null);
+      const left = data.remaining as number | null;
+      setInfo(left === null ? '' : `Te quedan ${left} ${data.mode === 'text' ? (left === 1 ? 'consulta de texto' : 'consultas de texto') : (left === 1 ? 'foto' : 'fotos')} hoy.`);
       setNote(data.note ?? '');
-      if (!items.length) { setErr(data.note || 'No encontramos comida en la foto.'); return; }
+      if (!items.length) { setErr(data.note || 'No encontramos comida en lo que enviaste.'); return; }
       setRows(items.map((it, i) => {
         const f = foods.find((x) => norm(x.name) === norm(it.match ?? it.name));
         return { key: i, name: f?.name ?? it.name, grams: String(it.grams), foodId: f?.id ?? '', kcal: it.kcal_100g, p: it.protein_100g, c: it.carbs_100g, f: it.fat_100g, conf: it.confidence };
       }));
     } catch (e) { setErr((e as Error).message); }
-    finally { setBusy(false); if (input.current) input.current.value = ''; }
+    finally { setBusy(false); }
+  }
+  async function onFile(file?: File) {
+    if (!file) return;
+    try { await run({ image: await shrink(file), mediaType: 'image/jpeg' }); }
+    catch { setErr('No pudimos leer esa imagen. Prueba con otra foto.'); }
+    if (input.current) input.current.value = '';
   }
 
   const upd = (key: number, patch: Partial<Row>) => setRows((rs) => rs!.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -86,21 +92,28 @@ export default function PhotoMeal({ userId, foods, meal, mealLabel, reload }:
     const { error } = await supabase.from('meal_logs').insert(list);
     setBusy(false);
     if (error) return setErr('No pudimos guardar: ' + error.message);
-    setRows(null); await reload();
+    setRows(null); setText(''); await reload();
   }
 
   return (
     <section className="card space-y-3">
       <input ref={input} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Foto de la comida"
         onChange={(e) => onFile(e.target.files?.[0])} />
-      {!rows && (
+      {!rows && (<>
         <button className="btn flex w-full items-center justify-center gap-2" disabled={busy} onClick={() => input.current?.click()}>
           <Camera size={20} aria-hidden />{busy ? 'Analizando tu comida…' : 'Registrar con una foto'}
-        </button>)}
+        </button>
+        <div className="space-y-2">
+          <label className="label" htmlFor="ai-text">…o cuéntanos qué comiste</label>
+          <textarea id="ai-text" rows={2} maxLength={600} className="input" value={text} onChange={(e) => setText(e.target.value)}
+            placeholder="Ej: hoy comí crema de lentejas, 200 g en total, y un pan" />
+          <button className="btn-ghost flex w-full items-center justify-center gap-2" disabled={busy || text.trim().length < 3}
+            onClick={() => run({ text })}><PenLine size={18} aria-hidden />Analizar texto</button>
+        </div></>)}
       {err && <p role="alert" className="text-sm font-semibold text-berry">{err}</p>}
       {rows && (
         <div className="space-y-3">
-          <p className="font-extrabold">Esto es lo que vimos. Revísalo y corrígelo.</p>
+          <p className="font-extrabold">Esto es lo que entendimos. Revísalo y corrígelo.</p>
           {note && <p className="rounded-2xl bg-mango/20 p-2 text-sm">{note}</p>}
           {rows.map((r) => (
             <div key={r.key} className="space-y-2 rounded-2xl bg-ink/5 p-3">
@@ -131,7 +144,7 @@ export default function PhotoMeal({ userId, foods, meal, mealLabel, reload }:
           </div>
         </div>)}
       <p className="text-xs text-ink/60">
-        Las porciones por foto son aproximadas: revisa los gramos.{remaining !== null ? ` Te quedan ${remaining} ${remaining === 1 ? 'foto' : 'fotos'} hoy.` : ' Límite: 4 fotos por día.'}
+        Las porciones estimadas son aproximadas: revisa los gramos. {info || 'Límite diario: 4 fotos y 8 consultas de texto.'}
       </p>
     </section>
   );

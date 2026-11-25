@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { iso } from '../lib/dates';
 import { EXERCISE_GROUPS, exerciseKcal, itemKcal } from '../lib/calc';
 import type { Food, MealType, Props } from '../types';
-import PhotoMeal from '../components/PhotoMeal';
+import AiMeal from '../components/AiMeal';
 
 const MEALS: { id: MealType; label: string }[] = [
   { id: 'desayuno', label: 'Desayuno' }, { id: 'almuerzo', label: 'Almuerzo' }, { id: 'cena', label: 'Cena' }, { id: 'snack', label: 'Snacks' },
@@ -89,7 +89,7 @@ export default function Log({ userId, data, reload }: Props) {
         {MEALS.map((m) => (<button key={m.id} role="tab" aria-selected={meal === m.id} onClick={() => setMeal(m.id)}
           className={`rounded-xl py-2 text-sm font-bold ${meal === m.id ? 'bg-white shadow-sm' : ''}`}>{m.label}</button>))}
       </div>
-      <PhotoMeal userId={userId} foods={data.foods} meal={meal} mealLabel={MEALS.find((m) => m.id === meal)!.label} reload={reload} />
+      <AiMeal userId={userId} foods={data.foods} meal={meal} mealLabel={MEALS.find((m) => m.id === meal)!.label} reload={reload} />
       <section className="card space-y-3">
         <label className="label" htmlFor="q">Buscar alimento</label>
         <input id="q" className="input" placeholder="Ej: pollo, arroz, manzana…" value={q} onChange={(e) => setQ(e.target.value)} />

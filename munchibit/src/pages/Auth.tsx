@@ -41,7 +41,7 @@ export default function Auth({ recovery, onDone }: { recovery: boolean; onDone: 
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 p-6">
       <div className="flex flex-col items-center">
         <h1 className="sr-only">MunchiBit</h1>
-        <img src="/logo.png" alt="MunchiBit" width={700} height={583} className="w-60 rounded-3xl" />
+        <img src="/logo.png" alt="MunchiBit" className="h-auto w-60" />
         <p className="mt-1 text-ink/70">Cuenta calorías sin culpa</p></div>
       <form onSubmit={submit} className="card space-y-3">
         <h2 className="text-lg font-bold">{title}</h2>

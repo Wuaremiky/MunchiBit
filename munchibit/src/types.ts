@@ -19,9 +19,10 @@ export interface MealLog {
 export interface ExerciseLog { id: string; date: string; type: string; minutes: number; kcal_burned: number }
 export interface WaterLog { date: string; glasses: number }
 export interface WeightLog { date: string; weight_kg: number }
+export interface ActivityLog { date: string; level: string }
 export interface Goal { effective_from: string; kcal: number; protein_g: number; carbs_g: number; fat_g: number }
 export interface AppData {
   profile: Profile; meals: MealLog[]; exercise: ExerciseLog[]; water: WaterLog[];
-  weights: WeightLog[]; goals: Goal[]; foods: Food[]; favorites: string[];
+  weights: WeightLog[]; activity: ActivityLog[]; goals: Goal[]; foods: Food[]; favorites: string[];
 }
 export interface Props { userId: string; data: AppData; reload: () => Promise<void> }

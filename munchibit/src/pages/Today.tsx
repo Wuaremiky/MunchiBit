@@ -4,7 +4,7 @@ import Mascot, { type Mood } from '../components/Mascot';
 import { supabase } from '../lib/supabase';
 import { iso } from '../lib/dates';
 import { goalFor, plateau, realtimeSuggestions, safetyAlerts, streak, summarize } from '../lib/recommendations';
-import { computeTargets } from '../lib/calc';
+import { computeTargets, DAY_ACTIVITY, dayActivityKcal, type DayActivity } from '../lib/calc';
 import type { Props } from '../types';
 import CardList from '../components/CardList';
 
@@ -20,7 +20,9 @@ export default function Today({ userId, data, reload, goTo }: Props & { goTo: (t
   const sums = summarize(data, 14, today);
   const td = sums[sums.length - 1];
   const goalKcal = p.daily_kcal ?? 2000;
-  const budget = goalKcal + (p.add_exercise_calories ? td.burned : 0);
+  const level = (data.activity.find((a) => a.date === today)?.level ?? 'normal') as DayActivity;
+  const extra = dayActivityKcal(level, p.weight_kg ?? 70);
+  const budget = goalKcal + (p.add_exercise_calories ? td.burned + extra : 0);
   const left = Math.round(budget - td.kcal);
   const scale = budget / Math.max(goalKcal, 1); // el ejercicio sumado también amplía los macros
   const meals = data.meals.filter((m) => m.date === today);
@@ -41,6 +43,13 @@ export default function Today({ userId, data, reload, goTo }: Props & { goTo: (t
     ...(plateau(data.weights, sums, today) ? [plateau(data.weights, sums, today)!] : []),
   ].slice(0, 3);
 
+  const [actErr, setActErr] = useState<string | null>(null);
+  async function setLevel(l: DayActivity) {
+    setBusy(true); setActErr(null);
+    const { error } = await supabase.from('activity_logs').upsert({ user_id: userId, date: today, level: l }, { onConflict: 'user_id,date' });
+    if (error) setActErr('No pudimos guardar. ¿Ejecutaste supabase/daily_activity.sql?');
+    await reload(); setBusy(false);
+  }
   async function water(delta: number) {
     setBusy(true);
     await supabase.from('water_logs').upsert({ user_id: userId, date: today, glasses: Math.max(0, td.glasses + delta) }, { onConflict: 'user_id,date' });
@@ -64,12 +73,25 @@ export default function Today({ userId, data, reload, goTo }: Props & { goTo: (t
           <div className="flex justify-between"><dt>Meta del día</dt><dd>{Math.round(budget)}</dd></div>
           <div className="flex justify-between"><dt>Consumidas</dt><dd>{Math.round(td.kcal)}</dd></div>
           <div className="flex justify-between"><dt>Ejercicio</dt><dd>+{Math.round(td.burned)}{p.add_exercise_calories ? '' : ' (no suma)'}</dd></div>
+          {extra > 0 && <div className="flex justify-between"><dt>Actividad del día</dt><dd>+{extra}{p.add_exercise_calories ? '' : ' (no suma)'}</dd></div>}
         </dl>
       </section>
       <section className="card space-y-3">
         <Bar label="Proteínas" v={sum('protein_g')} max={Math.round((p.protein_g ?? 0) * scale)} color="#D6455D" />
         <Bar label="Carbohidratos" v={sum('carbs_g')} max={Math.round((p.carbs_g ?? 0) * scale)} color="#FFB020" />
         <Bar label="Grasas" v={sum('fat_g')} max={Math.round((p.fat_g ?? 0) * scale)} color="#3B82C4" />
+      </section>
+      <section className="card space-y-2">
+        <h2 className="font-extrabold">Actividad de hoy</h2>
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Actividad de hoy">
+          {(Object.keys(DAY_ACTIVITY) as DayActivity[]).map((l) => (
+            <button key={l} role="radio" aria-checked={level === l} disabled={busy} onClick={() => setLevel(l)}
+              className={`rounded-2xl px-2 py-2 text-sm font-bold ${level === l ? 'bg-leaf text-white' : 'bg-ink/5'}`}>
+              {DAY_ACTIVITY[l].label}<span className="block text-xs font-normal">{dayActivityKcal(l, p.weight_kg ?? 70) > 0 ? `+${dayActivityKcal(l, p.weight_kg ?? 70)} kcal` : 'base'}</span></button>))}
+        </div>
+        <p className="text-sm text-ink/70">{DAY_ACTIVITY[level].hint}. No cuentes aquí el ejercicio que ya registraste.
+          {p.add_exercise_calories ? '' : ' Se suma a tu presupuesto si activas la opción de sumar calorías quemadas en Perfil.'}</p>
+        {actErr && <p role="alert" className="text-sm font-semibold text-berry">{actErr}</p>}
       </section>
       <section className="grid grid-cols-2 gap-3">
         <div className="card"><p className="flex items-center gap-1 font-bold"><Flame size={18} className="text-mango" aria-hidden />Racha</p>

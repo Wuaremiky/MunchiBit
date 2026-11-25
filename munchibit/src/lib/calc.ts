@@ -98,3 +98,14 @@ export function estimateGoalDate(
   if (!isFinite(days) || days <= 0 || days > 730) return null;
   return addDays(today, Math.ceil(days));
 }
+
+/** Actividad del día fuera del ejercicio registrado (caminar, aseo, tareas del hogar). Solo suma; valores moderados a propósito. */
+export type DayActivity = 'normal' | 'activo' | 'muy_activo';
+export const DAY_ACTIVITY: Record<DayActivity, { label: string; hint: string; kcal: number }> = {
+  normal: { label: 'Normal', hint: 'Un día típico', kcal: 0 },
+  activo: { label: 'Activo', hint: 'Caminé o me moví más de lo habitual', kcal: 150 },
+  muy_activo: { label: 'Muy activo', hint: 'De pie y en movimiento casi todo el día', kcal: 300 },
+};
+/** Calorías extra estimadas, escaladas por peso corporal (base 70 kg) y redondeadas a 10. */
+export const dayActivityKcal = (level: DayActivity, weightKg: number) =>
+  Math.round((DAY_ACTIVITY[level].kcal * weightKg) / 70 / 10) * 10;
