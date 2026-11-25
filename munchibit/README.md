@@ -81,3 +81,9 @@ En la pestaña Hoy hay un selector: **Normal** (+0), **Activo** (+150 kcal) y **
 - Se suma al presupuesto del día solo si tienes activada en Perfil la opción de sumar calorías quemadas.
 - No cuentes aquí el ejercicio que ya registraste, para no contar dos veces.
 - Requiere ejecutar `supabase/daily_activity.sql` en el SQL Editor de Supabase. Si falta, el resto de la app funciona igual.
+
+## Dictado por voz
+Junto al cuadro de texto hay un botón de micrófono. Tocas, hablas, y lo dicho se transcribe al cuadro; tú lo revisas y pulsas "Analizar texto" (así un error de transcripción no gasta una consulta).
+- Usa el reconocimiento de voz del propio navegador: gratis y sin cambios en Supabase. Funciona en Chrome, Edge y Safari (incluido el celular), y requiere HTTPS (Vercel lo da) y permitir el micrófono. Firefox no lo soporta: ahí el botón no aparece.
+- El audio lo transcribe el servicio del navegador (Google en Chrome, Apple en Safari), no Anthropic. A Claude solo llega el texto final.
+- El idioma de dictado es `es-CL`; se cambia en `r.lang` de `src/components/AiMeal.tsx`.

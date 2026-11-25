@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Camera, PenLine, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, Mic, PenLine, Square, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { iso } from '../lib/dates';
 import { itemKcal } from '../lib/calc';
@@ -31,6 +31,32 @@ export default function AiMeal({ userId, foods, meal, mealLabel, reload }:
   const [note, setNote] = useState('');
   const [info, setInfo] = useState('');
   const [text, setText] = useState('');
+  const [listening, setListening] = useState(false);
+  const rec = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const SR = typeof window !== 'undefined'
+    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition // eslint-disable-line @typescript-eslint/no-explicit-any
+    : null;
+  useEffect(() => () => rec.current?.stop(), []);
+
+  /** Dictado: el navegador transcribe la voz a texto; tú lo revisas y recién ahí pulsas "Analizar texto". */
+  function toggleMic() {
+    if (listening) { rec.current?.stop(); return; }
+    const r = new SR();
+    r.lang = 'es-CL'; r.interimResults = true; r.continuous = true;
+    const base = text.trim() ? text.trim() + ' ' : '';
+    r.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      let t = '';
+      for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+      setText((base + t).slice(0, 600));
+    };
+    r.onerror = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      setListening(false);
+      setErr(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? 'Permite el acceso al micrófono en tu navegador para dictar.'
+        : e.error === 'no-speech' ? 'No escuchamos nada. Inténtalo de nuevo.' : `No pudimos usar el micrófono (${e.error}).`);
+    };
+    r.onend = () => setListening(false);
+    rec.current = r; setErr(null); setListening(true); r.start();
+  }
 
   const nut = (r: Row) => {
     const f = foods.find((x) => x.id === r.foodId);
@@ -39,6 +65,7 @@ export default function AiMeal({ userId, foods, meal, mealLabel, reload }:
   const total = (rows ?? []).reduce((s, r) => s + itemKcal(nut(r).kcal, +r.grams || 0), 0);
 
   async function run(payload: Record<string, unknown>) {
+    rec.current?.stop();
     setBusy(true); setErr(null); setRows(null);
     try {
       const { data, error } = await supabase.functions.invoke('analyze-meal', {
@@ -105,8 +132,21 @@ export default function AiMeal({ userId, foods, meal, mealLabel, reload }:
         </button>
         <div className="space-y-2">
           <label className="label" htmlFor="ai-text">…o cuéntanos qué comiste</label>
-          <textarea id="ai-text" rows={2} maxLength={600} className="input" value={text} onChange={(e) => setText(e.target.value)}
-            placeholder="Ej: hoy comí crema de lentejas, 200 g en total, y un pan" />
+          <div className="flex items-start gap-2">
+            <textarea id="ai-text" rows={2} maxLength={600} className="input" value={text} onChange={(e) => setText(e.target.value)}
+              placeholder="Ej: hoy comí crema de lentejas, 200 g en total, y un pan" />
+            {SR && (
+              <button type="button" onClick={toggleMic} aria-pressed={listening} disabled={busy}
+                aria-label={listening ? 'Detener dictado' : 'Dictar con el micrófono'}
+                className={`shrink-0 rounded-2xl p-3 font-bold transition active:scale-95 ${listening ? 'animate-pulse bg-berry text-white' : 'bg-leaf text-white'}`}>
+                {listening ? <Square size={20} aria-hidden /> : <Mic size={20} aria-hidden />}
+              </button>)}
+          </div>
+          <p className="text-xs text-ink/60" aria-live="polite">
+            {listening ? 'Escuchando… habla y toca el cuadrado cuando termines.'
+              : SR ? 'Toca el micrófono, cuéntanos qué comiste y revisa el texto antes de analizar.'
+              : 'Tu navegador no permite dictar por voz; escribe con el teclado.'}
+          </p>
           <button className="btn-ghost flex w-full items-center justify-center gap-2" disabled={busy || text.trim().length < 3}
             onClick={() => run({ text })}><PenLine size={18} aria-hidden />Analizar texto</button>
         </div></>)}
